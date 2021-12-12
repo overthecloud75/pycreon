@@ -1,0 +1,5 @@
+comtypes==1.1.10
+pymongo==4.0.1
+pywin32==302
+pywinauto==0.6.8
+six==1.16.0
