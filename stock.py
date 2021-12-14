@@ -1,12 +1,12 @@
+import logging
 from pymongo import MongoClient
 
 from cybos.util import *
+from utils.util import checkTime
 try:
     from config import MONGOURL
 except Exception:
     MONGOURL = 'mongodb://localhost:27017/'
-from utils.customlogging import setupLogger
-from utils.util import checkTime
 
 mongoClient = MongoClient(MONGOURL)
 db = mongoClient['Daeshin']
@@ -17,7 +17,7 @@ class Stock:
     codeMgr = CodeMgr()
     chart = Chart()
     def __init__(self):
-        self.logger = setupLogger(identity=__name__)
+        self.logger = logging.getLogger(__name__)
         self.logger.info('%s start' %__name__)
 
     def codeInDB(self):
@@ -71,38 +71,40 @@ class Stock:
             if codeInfo['secondCode'] == 1: # 주권
                 code = codeInfo['code']
                 name = codeInfo['name']
-                if self.isNeedProceed(code):
-                    chartDataList = self.chart.getChart(code=codeInfo['code'], numData=1000)
+                tick = 'D'
+                if self.DoesNeedProceed(code, tick):
+                    chartDataList = self.chart.getChart(code=codeInfo['code'], tick=tick, numData=1000)
                     chartDataList.reverse()
                     for chartData in chartDataList:
                         date = chartData[0]
-                        chartInfo = {'code': code, 'name': name, 'date': date, 'data': chartData[1:]}
+                        chartInfo = {'code': code, 'name': name, 'date': date, 'type': tick, 'data': chartData[1:]}
                         try:
                             collection.update_one({'code': codeInfo['code'], 'date': date}, {'$set': chartInfo}, upsert=True)
                         except Exception as e:
                             self.logger.error('%s: %s' %(e, chartInfo))
                     time.sleep(5)
 
-    def isNeedProceed(self, code):
+    def DoesNeedProceed(self, code, tick):
         needProceed = True
         hour, today = checkTime()
 
         collection = db['chart']
-        lastChartData = collection.find_one({'code': code}, sort=[('date', -1)])
+        lastChartData = collection.find_one({'code': code, 'type': tick}, sort=[('date', -1)])
         if lastChartData is None:
             return needProceed
         elif lastChartData['date'] != today:
             return needProceed
         else:
-            totalCount = collection.count_documents({'code': code})
+            '''totalCount = collection.count_documents({'code': code})
             # pymongo에서 count()를 사용하면 에러 발생 (최신 버전에서 바뀐 듯)
             if totalCount == 1000:
                 needProceed = False
                 return needProceed
             else:
                 self.logger.warn('code: %s, chartCount: %s' %(code, totalCount))
-                return needProceed
-
+                return needProceed'''
+            needProceed = False
+            return needProceed
 
 
 

@@ -2,11 +2,14 @@ import win32com.client
 import os
 from pywinauto import application
 import time
+import logging
 
 class Creon:
     # 자동 접속
     # http://blog.quantylab.com/creonlogin.html
     def __init__(self):
+        self.logger = logging.getLogger(__name__)
+        self.logger.info('%s start' % __name__)
         self.com_obj = win32com.client.Dispatch('CpUtil.CpCybos')
 
     def kill_client(self):
@@ -28,7 +31,9 @@ class Creon:
                 )
             )
         while not self.connected():
+            self.logger.warn('connecting to server')
             time.sleep(1)
+        self.logger.info('connected to server')
         return True
 
     def connected(self):
