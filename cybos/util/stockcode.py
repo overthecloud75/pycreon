@@ -1,9 +1,9 @@
 import win32com.client
 
 
-class CpStockCode:
+class StockCode:
     def __init__(self):
-        self.com_obj = win32com.client.Dispatch("cputil.CpStockCode")
+        self.com_obj = win32com.client.Dispatch("util.CpStockCode")
 
     def CodeToName(self, code):
         return self.com_obj.CodeToName(code)
@@ -48,18 +48,3 @@ class CpStockCode:
         return ret
 
 
-if __name__ == "__main__":
-    stockcode = CpStockCode()
-
-    # method
-    print(stockcode.CodeToName("A005930"))
-    print(stockcode.NameToCode("삼성전자"))
-    print(stockcode.CodeToFullCode("005930"))
-    print(stockcode.FullCodeToName("KR7005930003"))
-    print(stockcode.FullCodeToCode("KR7005930003"))
-    print(stockcode.CodeToIndex("A005930"))
-    print(stockcode.GetCount())
-    print(stockcode.GetData(0, 339))
-    print(stockcode.GetData(1, 339))
-    print(stockcode.GetData(2, 339))
-    print(stockcode.GetPriceUnit("005930", 40000, True))

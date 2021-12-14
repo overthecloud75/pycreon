@@ -3,7 +3,7 @@ import win32com.client
 
 class CpTdUtil:
     def __init__(self):
-        self.com_obj = win32com.client.Dispatch("cptrade.CpTdUtil")
+        self.com_obj = win32com.client.Dispatch("trade.CpTdUtil")
 
     @property
     def AccountNumber(self):

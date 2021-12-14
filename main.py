@@ -1,9 +1,9 @@
-from pycybos.cputil import *
+from cybos.util import *
+
 try:
-    from config import *
+    from config import USER
 except Exception:
     USER = {'id': None, 'pwd': None, 'pwdcert': None}
-    MONGOURL = 'mongodb://localhost:27017/'
 from stock import Stock
 
 
@@ -13,6 +13,7 @@ def main():
 
     stock = Stock()
     stock.insertNewCode()
+    stock.insertNewChart()
 
 
 if __name__ == "__main__":
