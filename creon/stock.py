@@ -1,10 +1,9 @@
-import logging
 from pymongo import MongoClient
 
-from cybos.util import *
-from utils.util import checkTime
+from creon.util import *
+from utils.util import getDiffDate
 try:
-    from config import MONGOURL
+    from config.privateconfig import MONGOURL
 except Exception:
     MONGOURL = 'mongodb://localhost:27017/'
 
@@ -23,15 +22,24 @@ class Stock:
     def codeInDB(self):
         collection = db['codeInfo']
         codeDB = collection.find()
-        codeListInDB = []
+        codeList = []
         for codeInfo in codeDB:
-            codeListInDB.append(codeInfo['code'])
-        return codeListInDB
+            codeList.append(codeInfo['code'])
+        return codeList
 
     def codeInfoInDB(self):
         collection = db['codeInfo']
-        codeDB = collection.find()
-        return codeDB
+        # MongoDB Cursor Not Found
+        # https://velog.io/@rhs0266/MongoDB-Cursor-Not-Found-1
+        # https://docs.mongodb.com/manual/reference/method/cursor.noCursorTimeout/
+        # https://docs.mongodb.com/v4.4/reference/method/cursor.noCursorTimeout/
+        # https://stackoverflow.com/questions/24199729/pymongo-errors-cursornotfound-cursor-id-not-valid-at-server
+        # codeInfoList = collection.find(no_cursor_timeout=True)
+        codeInfoList = collection.find()
+        codeInfoListInDB = []
+        for codeInfo in codeInfoList:
+            codeInfoListInDB.append(codeInfo)
+        return codeInfoListInDB
 
     def insertNewCode(self):
         '''
@@ -63,17 +71,19 @@ class Stock:
             1. DB에 저장되어 있는 codeList 확인
             2. secondCode가 1인지 확인
             3. DB에 오늘 날짜 data가 있는지 확인 후 없으면 4를 진행
-            4. chartData DB에 저장
+            4. 오늘 날짜가 없다면 기록된 마지막 날짜와의 날짜 차이만큼 numData 설정
+            5. chartData DB에 저장
         '''
         collection = db['chart']
-        codeListInDB = self.codeInfoInDB()
-        for codeInfo in codeListInDB:
+        codeInfoListInDB = self.codeInfoInDB()
+        for codeInfo in codeInfoListInDB:
             if codeInfo['secondCode'] == 1: # 주권
                 code = codeInfo['code']
                 name = codeInfo['name']
                 tick = 'D'
-                if self.DoesNeedProceed(code, tick):
-                    chartDataList = self.chart.getChart(code=codeInfo['code'], tick=tick, numData=1000)
+                numData = self.getNumData(code, tick)
+                if numData:
+                    chartDataList = self.chart.getChart(code=codeInfo['code'], tick=tick, numData=numData)
                     chartDataList.reverse()
                     for chartData in chartDataList:
                         date = chartData[0]
@@ -82,29 +92,22 @@ class Stock:
                             collection.update_one({'code': codeInfo['code'], 'date': date}, {'$set': chartInfo}, upsert=True)
                         except Exception as e:
                             self.logger.error('%s: %s' %(e, chartInfo))
-                    time.sleep(5)
+                    self.logger.info('insertNewChart: %s, numData: %s' %(code, str(numData)))
+                    time.sleep(3)
+        # cursor의 notimeout=True로 한 경우 사용 후 종료 필요
+        # codeInfoListInDB.close()
 
-    def DoesNeedProceed(self, code, tick):
-        needProceed = True
-        hour, today = checkTime()
+    def getNumData(self, code, tick):
 
         collection = db['chart']
         lastChartData = collection.find_one({'code': code, 'type': tick}, sort=[('date', -1)])
         if lastChartData is None:
-            return needProceed
-        elif lastChartData['date'] != today:
-            return needProceed
+            numData = 1000
         else:
-            '''totalCount = collection.count_documents({'code': code})
+            numData = getDiffDate(lastChartData['date'])
+            # totalCount = collection.count_documents({'code': code})
             # pymongo에서 count()를 사용하면 에러 발생 (최신 버전에서 바뀐 듯)
-            if totalCount == 1000:
-                needProceed = False
-                return needProceed
-            else:
-                self.logger.warn('code: %s, chartCount: %s' %(code, totalCount))
-                return needProceed'''
-            needProceed = False
-            return needProceed
+        return numData
 
 
 

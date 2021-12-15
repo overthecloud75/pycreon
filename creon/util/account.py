@@ -4,7 +4,7 @@ from pywinauto import application
 import time
 import logging
 
-class Creon:
+class Account:
     # 자동 접속
     # http://blog.quantylab.com/creonlogin.html
     def __init__(self):
@@ -21,7 +21,7 @@ class Creon:
         os.system('wmic process where "name like \'%CpStart%\'" call terminate')
         os.system('wmic process where "name like \'%DibServer%\'" call terminate')
 
-    def connect(self, id=None, pwd=None, pwdcert=None):
+    def login(self, id=None, pwd=None, pwdcert=None):
         if not self.connected():
             self.disconnect()
             self.kill_client()
@@ -50,10 +50,6 @@ class Creon:
         remainCount = self.com_obj.GetLimitRemainCount(1)
         if remainCount <= 0:
             time.sleep(self.com_obj.LimitRequestRemainTime / 1000)
-
-    #@property
-    #def IsConnect(self):
-    #    return self.com_obj.IsConnect
 
     @property
     def ServerType(self):

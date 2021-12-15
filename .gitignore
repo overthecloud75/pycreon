@@ -6,7 +6,8 @@ __pycache__/
 share/
 
 pyvenv.cfg
-config.py
+config/privateconfig.py
+dart/info/
 log/
 *.log
 *.1
