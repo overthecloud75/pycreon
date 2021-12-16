@@ -1,7 +1,7 @@
 import sys
 
 from creon.util import *
-from creon.stock import Stock
+from creon.models import Stock
 from utils.customlogging import setupLogger
 try:
     from config.privateconfig import USER
@@ -15,14 +15,14 @@ def main():
     creon = Account()
     creon.login(id=USER['id'], pwd=USER['pwd'], pwdcert=USER['pwdcert'])
 
+    '''chart = Chart()
+    data = chart.getChart(code='A000020', tick='M', numData=1)
+    print(data)'''
+
     stock = Stock()
     stock.insertNewCode()
-    try:
-        stock.insertNewChart()
-    except Exception as e:
-        logger.error('error: %s' %e)
-        sys.exit(e)
-        # https://it-neicebee.tistory.com/53
+    stock.insertNewChart()
+    # stock.deleteChart()
 
 if __name__ == "__main__":
     main()

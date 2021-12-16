@@ -1,5 +1,9 @@
 from dart import *
+from dart.models import corpCodeToDB
 
-data = corpCode()
+# data = corpCode()
+# corpCodeToDB()
 
-print(data)
+fnlttSinglAcntAll()
+
+

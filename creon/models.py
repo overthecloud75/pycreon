@@ -2,6 +2,7 @@ from pymongo import MongoClient
 
 from creon.util import *
 from utils.util import getDiffDate
+from config.publicconfig import TICKLIST
 try:
     from config.privateconfig import MONGOURL
 except Exception:
@@ -71,8 +72,10 @@ class Stock:
             1. DB에 저장되어 있는 codeList 확인
             2. secondCode가 1인지 확인
             3. DB에 오늘 날짜 data가 있는지 확인 후 없으면 4를 진행
+               -> 장 종료 전은 날짜를 1일 뺌
             4. 오늘 날짜가 없다면 기록된 마지막 날짜와의 날짜 차이만큼 numData 설정
             5. chartData DB에 저장
+            6. 장종료 전의 data는 저장하지 않음
         '''
         collection = db['chart']
         codeInfoListInDB = self.codeInfoInDB()
@@ -80,34 +83,45 @@ class Stock:
             if codeInfo['secondCode'] == 1: # 주권
                 code = codeInfo['code']
                 name = codeInfo['name']
-                tick = 'D'
-                numData = self.getNumData(code, tick)
-                if numData:
-                    chartDataList = self.chart.getChart(code=codeInfo['code'], tick=tick, numData=numData)
-                    chartDataList.reverse()
-                    for chartData in chartDataList:
-                        date = chartData[0]
-                        chartInfo = {'code': code, 'name': name, 'date': date, 'type': tick, 'data': chartData[1:]}
-                        try:
-                            collection.update_one({'code': codeInfo['code'], 'date': date}, {'$set': chartInfo}, upsert=True)
-                        except Exception as e:
-                            self.logger.error('%s: %s' %(e, chartInfo))
-                    self.logger.info('insertNewChart: %s, numData: %s' %(code, str(numData)))
-                    time.sleep(3)
+                for tick in TICKLIST:
+                    numData, today = self.getNumData(code, tick=tick)
+                    print(numData, today, tick, code)
+                    if numData:
+                        chartDataList = self.chart.getChart(code=codeInfo['code'], tick=tick, numData=numData)
+                        chartDataList.reverse()
+                        for chartData in chartDataList:
+                            date = chartData[0]
+                            chartInfo = {'code': code, 'name': name, 'date': date, 'type': tick, 'data': chartData[1:]}
+                            try:
+                                if date > today:
+                                    # 장 종료전의 data가 수집되는 것을 막기 위함
+                                    pass
+                                else:
+                                    collection.update_one({'code': codeInfo['code'], 'date': date, 'type': tick}, {'$set': chartInfo}, upsert=True)
+                            except Exception as e:
+                                self.logger.error('%s: %s' %(e, chartInfo))
+                        self.logger.info('insertNewChart: %s, numData: %s, type: %s' %(code, str(numData), tick))
+                        time.sleep(3)
         # cursor의 notimeout=True로 한 경우 사용 후 종료 필요
         # codeInfoListInDB.close()
 
-    def getNumData(self, code, tick):
-
+    def getNumData(self, code, tick='D'):
         collection = db['chart']
         lastChartData = collection.find_one({'code': code, 'type': tick}, sort=[('date', -1)])
         if lastChartData is None:
-            numData = 1000
+            numData, today = getDiffDate(tick=tick)
         else:
-            numData = getDiffDate(lastChartData['date'])
+            numData, today = getDiffDate(lastChartData['date'], tick=tick)
             # totalCount = collection.count_documents({'code': code})
             # pymongo에서 count()를 사용하면 에러 발생 (최신 버전에서 바뀐 듯)
-        return numData
+        return numData, today
+
+    def deleteChart(self):
+        collection = db['chart']
+        collection.delete_many({'type': 'M'})
+
+
+
 
 
 
