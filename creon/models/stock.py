@@ -1,24 +1,27 @@
 from pymongo import MongoClient
 
-from creon.util import *
+from creon.api import *
 from utils.util import getDiffDate
 from config.publicconfig import TICKLIST
 try:
-    from config.privateconfig import MONGOURL
+    from config.privateconfig import MONGOURL, DB_NAME
 except Exception:
     MONGOURL = 'mongodb://localhost:27017/'
+    DB_NAME = 'Daeshin'
 
 mongoClient = MongoClient(MONGOURL)
 db = mongoClient['Daeshin']
 
-
 class Stock:
-
-    codeMgr = CodeMgr()
-    chart = Chart()
-    def __init__(self):
+    def __init__(self, id=None, pwd=None, pwdcert=None):
         self.logger = logging.getLogger(__name__)
         self.logger.info('%s start' %__name__)
+
+        self.creon = Account()
+        self.creon.login(id=id, pwd=pwd, pwdcert=pwdcert)
+
+        self.codeMgr = CodeMgr()
+        self.chart = Chart()
 
     def codeInDB(self):
         collection = db['codeInfo']
@@ -36,10 +39,11 @@ class Stock:
         # https://docs.mongodb.com/v4.4/reference/method/cursor.noCursorTimeout/
         # https://stackoverflow.com/questions/24199729/pymongo-errors-cursornotfound-cursor-id-not-valid-at-server
         # codeInfoList = collection.find(no_cursor_timeout=True)
-        codeInfoList = collection.find()
+        codeDB = collection.find()
         codeInfoListInDB = []
-        for codeInfo in codeInfoList:
-            codeInfoListInDB.append(codeInfo)
+        for codeInfo in codeDB:
+            if codeInfo['secondCode'] == 1:  # 주권
+                codeInfoListInDB.append(codeInfo)
         return codeInfoListInDB
 
     def insertNewCode(self):
@@ -80,28 +84,27 @@ class Stock:
         collection = db['chart']
         codeInfoListInDB = self.codeInfoInDB()
         for codeInfo in codeInfoListInDB:
-            if codeInfo['secondCode'] == 1: # 주권
-                code = codeInfo['code']
-                name = codeInfo['name']
-                for tick in TICKLIST:
-                    numData, today = self.getNumData(code, tick=tick)
-                    print(numData, today, tick, code)
-                    if numData:
-                        chartDataList = self.chart.getChart(code=codeInfo['code'], tick=tick, numData=numData)
-                        chartDataList.reverse()
-                        for chartData in chartDataList:
-                            date = chartData[0]
-                            chartInfo = {'code': code, 'name': name, 'date': date, 'type': tick, 'data': chartData[1:]}
-                            try:
-                                if date > today:
-                                    # 장 종료전의 data가 수집되는 것을 막기 위함
-                                    pass
-                                else:
-                                    collection.update_one({'code': codeInfo['code'], 'date': date, 'type': tick}, {'$set': chartInfo}, upsert=True)
-                            except Exception as e:
-                                self.logger.error('%s: %s' %(e, chartInfo))
-                        self.logger.info('insertNewChart: %s, numData: %s, type: %s' %(code, str(numData), tick))
-                        time.sleep(3)
+            code = codeInfo['code']
+            name = codeInfo['name']
+            for tick in TICKLIST:
+                numData, today = self.getNumData(code, tick=tick)
+                print(numData, today, tick, code)
+                if numData:
+                    chartDataList = self.chart.getChart(code=codeInfo['code'], tick=tick, numData=numData)
+                    chartDataList.reverse()
+                    for chartData in chartDataList:
+                        date = chartData[0]
+                        chartInfo = {'code': code, 'name': name, 'date': date, 'type': tick, 'data': chartData[1:]}
+                        try:
+                            if date > today:
+                                # 장 종료전의 data가 수집되는 것을 막기 위함
+                                pass
+                            else:
+                                collection.update_one({'code': codeInfo['code'], 'date': date, 'type': tick}, {'$set': chartInfo}, upsert=True)
+                        except Exception as e:
+                            self.logger.error('%s: %s' %(e, chartInfo))
+                    self.logger.info('insertNewChart: %s, numData: %s, type: %s' %(code, str(numData), tick))
+                    time.sleep(3)
         # cursor의 notimeout=True로 한 경우 사용 후 종료 필요
         # codeInfoListInDB.close()
 
@@ -115,15 +118,3 @@ class Stock:
             # totalCount = collection.count_documents({'code': code})
             # pymongo에서 count()를 사용하면 에러 발생 (최신 버전에서 바뀐 듯)
         return numData, today
-
-    def deleteChart(self):
-        collection = db['chart']
-        collection.delete_many({'type': 'M'})
-
-
-
-
-
-
-
-

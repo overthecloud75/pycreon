@@ -1,9 +1,20 @@
-from dart import *
-from dart.models import corpCodeToDB
+from dart.models import Dart
+from dart.api import corpCode
+from utils.customlogging import setupLogger
 
-# data = corpCode()
-# corpCodeToDB()
 
-fnlttSinglAcntAll()
+
+def main():
+    logger = setupLogger(identity='dart')
+    logger.info('main start')
+    # corpCode()
+    dart = Dart()
+    dart.corpCodeToDB()
+    dart.insertNewFinanceData()
+
+if __name__ == "__main__":
+    main()
+
+
 
 

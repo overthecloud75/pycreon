@@ -3,7 +3,7 @@ import win32com.client
 
 class StockCode:
     def __init__(self):
-        self.com_obj = win32com.client.Dispatch("util.CpStockCode")
+        self.com_obj = win32com.client.Dispatch("api.CpStockCode")
 
     def CodeToName(self, code):
         return self.com_obj.CodeToName(code)

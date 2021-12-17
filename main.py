@@ -1,7 +1,4 @@
-import sys
-
-from creon.util import *
-from creon.models import Stock
+from creon.models import Stock, Processing
 from utils.customlogging import setupLogger
 try:
     from config.privateconfig import USER
@@ -12,17 +9,19 @@ except Exception:
 def main():
     logger = setupLogger(identity='pycreon')
     logger.info('main start')
-    creon = Account()
-    creon.login(id=USER['id'], pwd=USER['pwd'], pwdcert=USER['pwdcert'])
 
     '''chart = Chart()
     data = chart.getChart(code='A000020', tick='M', numData=1)
     print(data)'''
 
-    stock = Stock()
+    # data 수집
+    stock = Stock(id=USER['id'], pwd=USER['pwd'], pwdcert=USER['pwdcert'])
     stock.insertNewCode()
     stock.insertNewChart()
-    # stock.deleteChart()
+
+    # data 가공
+    process = Processing()
+    process.processingData()
 
 if __name__ == "__main__":
     main()
