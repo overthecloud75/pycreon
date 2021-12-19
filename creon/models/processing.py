@@ -1,28 +1,13 @@
-from pymongo import MongoClient
 import logging
 
-try:
-    from config.privateconfig import MONGOURL, DB_NAME
-except Exception:
-    MONGOURL = 'mongodb://localhost:27017/'
-    DB_NAME = 'Daeshin'
+from commons.custommodel import CustomModel
 
-mongoClient = MongoClient(MONGOURL)
-db = mongoClient[DB_NAME]
 
-class Processing():
+class Processing(CustomModel):
     def __init__(self):
+        super().__init__()
         self.logger = logging.getLogger(__name__)
         self.logger.info('%s start' %__name__)
-
-    def codeInfoInDB(self):
-        collection = db['codeInfo']
-        codeDB = collection.find()
-        codeInfoListInDB = []
-        for codeInfo in codeDB:
-            if codeInfo['secondCode'] == 1:  # 주권
-                codeInfoListInDB.append(codeInfo)
-        return codeInfoListInDB
 
     def processingData(self):
         codeInfoListInDB = self.codeInfoInDB()
@@ -46,7 +31,7 @@ class Processing():
             1. maData에 저장 되어 있는 data중 마지작 날짜와 시작 날짜 정보를 확인
             2. 마지막 날짜 보다 이후 날짜에 대해서만 date 정보 수집
         '''
-        collection = db['chart']
+        collection = self.db['chart']
         beginDate, endDate = self.maDateInDB(code)
         dateListInDB = []
         dataInDB = collection.find({'code': code, 'type': tick}, sort=[('date', -1)])
@@ -62,7 +47,7 @@ class Processing():
         return dateListInDB
 
     def maDateInDB(self, code):
-        collection = db['ma']
+        collection = self.db['ma']
         dataInDB = collection.find_one({'code': code}, sort=[('date', 1)])
         if dataInDB is None:
             beginDate = None
@@ -74,7 +59,7 @@ class Processing():
         return beginDate, endDate
 
     def maDataToDB(self, code, date):
-        collection = db['ma']
+        collection = self.db['ma']
         maDataInDB = collection.find_one({'code': code, 'date': date})
         maData = {}
         if maDataInDB is None:
@@ -91,7 +76,7 @@ class Processing():
         return maData
 
     def closeDataInDB(self, code, date, tick='D'):
-        collection = db['chart']
+        collection = self.db['chart']
         dataListInDB = collection.find({'code': code, 'date': {'$lte': date}, 'type': tick}, sort=[('date', -1)]).limit(120)
         closeDataListInDB = []
         for data in dataListInDB:
@@ -99,5 +84,5 @@ class Processing():
         return closeDataListInDB
 
     def deleteChart(self):
-        collection = db['chart']
+        collection = self.db['chart']
         collection.delete_many({'type': 'M'})

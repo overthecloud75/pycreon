@@ -1,19 +1,11 @@
-from pymongo import MongoClient
-
 from creon.api import *
-from utils.util import getDiffDate
+from commons.util import getDiffDate
+from commons.custommodel import CustomModel
 from config.publicconfig import TICKLIST
-try:
-    from config.privateconfig import MONGOURL, DB_NAME
-except Exception:
-    MONGOURL = 'mongodb://localhost:27017/'
-    DB_NAME = 'Daeshin'
 
-mongoClient = MongoClient(MONGOURL)
-db = mongoClient['Daeshin']
-
-class Stock:
+class Stock(CustomModel):
     def __init__(self, id=None, pwd=None, pwdcert=None):
+        super().__init__()
         self.logger = logging.getLogger(__name__)
         self.logger.info('%s start' %__name__)
 
@@ -23,36 +15,13 @@ class Stock:
         self.codeMgr = CodeMgr()
         self.chart = Chart()
 
-    def codeInDB(self):
-        collection = db['codeInfo']
-        codeDB = collection.find()
-        codeList = []
-        for codeInfo in codeDB:
-            codeList.append(codeInfo['code'])
-        return codeList
-
-    def codeInfoInDB(self):
-        collection = db['codeInfo']
-        # MongoDB Cursor Not Found
-        # https://velog.io/@rhs0266/MongoDB-Cursor-Not-Found-1
-        # https://docs.mongodb.com/manual/reference/method/cursor.noCursorTimeout/
-        # https://docs.mongodb.com/v4.4/reference/method/cursor.noCursorTimeout/
-        # https://stackoverflow.com/questions/24199729/pymongo-errors-cursornotfound-cursor-id-not-valid-at-server
-        # codeInfoList = collection.find(no_cursor_timeout=True)
-        codeDB = collection.find()
-        codeInfoListInDB = []
-        for codeInfo in codeDB:
-            if codeInfo['secondCode'] == 1:  # 주권
-                codeInfoListInDB.append(codeInfo)
-        return codeInfoListInDB
-
     def insertNewCode(self):
         '''
             1. 증권사로부터 codeList 정보 수집
             2. DB에 저장되어 있는 codeList 확인
             3. 비교하여 없는 경우 code 정보를 DB에 저장
         '''
-        collection = db['codeInfo']
+        collection = self.db['codeInfo']
         codeList = self.codeMgr.GetStockListByMarket(1) + self.codeMgr.GetStockListByMarket(2) # 1 거래소 2 코스닥
         codeListInDB = self.codeInDB()
 
@@ -67,7 +36,7 @@ class Stock:
                 codeInfo['secondCode'] = self.codeMgr.GetStockSectionKind(code) # 부 구분 코드
                 codeInfo['stdPrice'] = self.codeMgr.GetStockStdPrice(code)  # 권리락 등으로 인한 기준가
                 # {'code': 'A000020', 'name': '동화약품', 'firstCode': 1, 'secondCode': 1, 'stdPrice': 14500}
-                collection.update_one({'code': code}, {'$set': codeInfo}, upsert=True)
+                collection.insert_one(codeInfo)
                 self.logger.warn('new code: %s' %codeInfo)
                 time.sleep(1)
 
@@ -81,7 +50,7 @@ class Stock:
             5. chartData DB에 저장
             6. 장종료 전의 data는 저장하지 않음
         '''
-        collection = db['chart']
+        collection = self.db['chart']
         codeInfoListInDB = self.codeInfoInDB()
         for codeInfo in codeInfoListInDB:
             code = codeInfo['code']
@@ -109,7 +78,7 @@ class Stock:
         # codeInfoListInDB.close()
 
     def getNumData(self, code, tick='D'):
-        collection = db['chart']
+        collection = self.db['chart']
         lastChartData = collection.find_one({'code': code, 'type': tick}, sort=[('date', -1)])
         if lastChartData is None:
             numData, today = getDiffDate(tick=tick)

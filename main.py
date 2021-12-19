@@ -1,5 +1,5 @@
 from creon.models import Stock, Processing
-from utils.customlogging import setupLogger
+from commons.customlogging import setupLogger
 try:
     from config.privateconfig import USER
 except Exception:
@@ -23,7 +23,7 @@ def main():
     process = Processing()
     process.processingData()
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
 
 
