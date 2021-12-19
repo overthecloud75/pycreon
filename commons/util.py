@@ -38,6 +38,26 @@ def getDiffDate(lastDate=None, tick='D'):
 def diffMonth(d1, d2):
     return (d1.year - d2.year) * 12 + d1.month - d2.month
 
+def getDateList(tick='M'):
+    _, today = getDiffDate(tick=tick)
+    dateList = [today]
+    today = str(today)
+    thisYear = int(today[0:4])
+    thisMonth = int(today[4:6])
+
+    for i in range(NUMDATA_MONTH - 1):
+        thisMonth = thisMonth - 1
+        if thisMonth < 1:
+            thisMonth = 12
+            thisYear = thisYear - 1
+        if thisMonth < 10:
+            today = int(str(thisYear) + '0'+ str(thisMonth) + '00')
+        else:
+            today = int(str(thisYear) + str(thisMonth) + '00')
+        dateList.append(today)
+    return dateList
+
+
 
 
 
