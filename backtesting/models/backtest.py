@@ -3,7 +3,7 @@ import time
 
 from commons.util import getDateList
 from commons.custommodel import CustomModel
-from commons.excel import writeInExcel
+from commons.excel import category, writeInExcel, summarize
 from backtesting.factors import Momentum
 
 class BackTesting(CustomModel):
@@ -30,12 +30,14 @@ class BackTesting(CustomModel):
             3.  period및 stay 기간만큼 closeDataList 정보 수집 (date에 대한 내림 차순)
             4.  period및 stay 기간만큼 없는 경우 codeList에서 제외
             5.  codeList의 갯수가 categoryNo * portfolio 보다 작으면 break
+            6.  data를 excel 기록
+            7.  기록된 data를 다식 summarize
         '''
         self.stopCodeList = []
         sheetName = sr[0:2] + '_pe' + str(self.period) + '_st' + str(self.stay) + '_la' + \
-                    str(self.includeLastDate) + '_fee' + str(self.fee)
-        growthResultCategoryList = self.category()
-        writeInExcel(growthResultCategoryList, dataType='title', sheetName=sheetName)
+                    str(self.includeLastDate)[0:2] + '_fee' + str(self.fee)
+        categoryList = category(categoryNo=self.categoryNo, types=['growth', 'result'])
+        writeInExcel(categoryList, dataType='title', sheetName=sheetName)
         for date in self.dateList:
             codeDataList = []
             for code in self.codeListInDB:
@@ -61,6 +63,8 @@ class BackTesting(CustomModel):
                 excelDataList = [date] + avgGrowthList + avgResultList
                 writeInExcel(excelDataList, dataType='data', sheetName=sheetName)
             self.stopCodeList = []
+
+        summarize(categoryNo=self.categoryNo, sheetName=sheetName)
 
     def closeDataInDB(self, code, endDate=20211100):
         collection = self.db['chart']
@@ -92,12 +96,6 @@ class BackTesting(CustomModel):
             avgGrowthList.append(round(sum(growthList) / len(growthList), 4))
             avgResultList.append(round(sum(resultList) / len(resultList), 4))
         return avgGrowthList, avgResultList
-
-    def category(self):
-        categoryList = []
-        for i in range(self.categoryNo):
-            categoryList.append(i+1)
-        return categoryList + categoryList
 
 
 

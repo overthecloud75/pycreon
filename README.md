@@ -2,6 +2,8 @@
 ### 1. Result
 ### 2. Usage
 python main.py <br>
+python darttest.py <br>
+python backtest.py <br>
 ### 3. Acknowledgements
 this implementation has been tested with 32bit Python 3.7.9 <br>
 ### 4. References

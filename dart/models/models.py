@@ -60,7 +60,7 @@ class Dart(CustomModel):
                                                'reprtCode': reprtCode, 'status': status, 'data': dataDict}
                             collection.insert_one(corpFinanceDict)
                         else:
-                            self.logger.error('sys exit because of status %s' %status)
+                            self.logger.error('sys exit because of status : %s' %status)
                             sys.exit('exit because of status %s' %status)
                         time.sleep(2)
                     # 일 10,000 분 1,000
