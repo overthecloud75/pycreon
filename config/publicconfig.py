@@ -6,6 +6,9 @@ TICKLIST = ['D', 'M']
 TRADING_END_TIME = 17
 
 # dart
-DARTURL = 'https://opendart.fss.or.kr/api/'
-DARTSAVEPATH = './dart/info'
+DART_URL = 'https://opendart.fss.or.kr/api/'
+DART_SAVE_PATH = './dart/info'
 REPORT_CODE_LIST = [11013, 11012, 11014, 11011]
+
+# backtest
+RESULT_PATH = 'results'

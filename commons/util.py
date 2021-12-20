@@ -11,7 +11,11 @@ def getDiffDate(lastDate=None, tick='D'):
         elif today.weekday() == 6:
             today = today - datetime.timedelta(2)
         elif now.hour < TRADING_END_TIME:
-            today = today - datetime.timedelta(1)
+            if today.weekday() == 0:
+                # 월요일일 경우 지난주 금요일 날짜로 지정
+                today = today - datetime.timedelta(3)
+            else:
+                today = today - datetime.timedelta(1)
         if lastDate:
             lastDate = str(lastDate)
             lastDateToDatetime = datetime.date(int(lastDate[0:4]), int(lastDate[4:6]), int(lastDate[6:]))
@@ -56,6 +60,7 @@ def getDateList(tick='M'):
             today = int(str(thisYear) + str(thisMonth) + '00')
         dateList.append(today)
     return dateList
+
 
 
 

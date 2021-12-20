@@ -7,7 +7,10 @@ class Chart:
         self.chartFields = (0, 1, 2, 3, 4, 5, 8, 9, 12, 14, 15, 16, 17, 18, 20, 21, 24)
 
     def getChart(self, code=None, tick='D', numData=1):
-        self.setValue(code, tick=tick, numData=numData)
+        try:
+            self.setValue(code, tick=tick, numData=numData)
+        except Exception as e:
+            print(e, code, tick)
         self.chart.BlockRequest()
         chartData = self.getValue()
         return chartData

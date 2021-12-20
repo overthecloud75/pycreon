@@ -3,10 +3,11 @@ import time
 
 from commons.util import getDateList
 from commons.custommodel import CustomModel
+from commons.excel import writeInExcel
 from backtesting.factors import Momentum
 
 class BackTesting(CustomModel):
-    def __init__(self, period=12, stay=1, categoryNo=20, portfolio=10, fee=0.0025):
+    def __init__(self, period=12, stay=1, categoryNo=20, portfolio=10, fee=0.0025, includeLastDate=False):
         super().__init__()
         self.logger = logging.getLogger(__name__)
         self.logger.info('%s start' % __name__)
@@ -18,10 +19,11 @@ class BackTesting(CustomModel):
         self.categoryNo = categoryNo
         self.portfolio = portfolio
         self.fee = fee
+        self.includeLastDate = includeLastDate
 
         self.momentum = Momentum(period=self.period, stay= self.stay)
 
-    def strategy(self, type='momentum'):
+    def strategy(self, sr='momentum'):
         '''
             1.  DB에서 stockCodeList를 확인
             2.  for dateList code
@@ -30,6 +32,10 @@ class BackTesting(CustomModel):
             5.  codeList의 갯수가 categoryNo * portfolio 보다 작으면 break
         '''
         self.stopCodeList = []
+        sheetName = sr[0:2] + '_pe' + str(self.period) + '_st' + str(self.stay) + '_la' + \
+                    str(self.includeLastDate) + '_fee' + str(self.fee)
+        growthResultCategoryList = self.category()
+        writeInExcel(growthResultCategoryList, dataType='title', sheetName=sheetName)
         for date in self.dateList:
             codeDataList = []
             for code in self.codeListInDB:
@@ -37,18 +43,23 @@ class BackTesting(CustomModel):
                 if len(closeDataListInDB) != self.period + self.stay:
                     self.stopCodeList.append(code)
                 else:
-                    # if type =='momentum':
-                    growth = self.momentum.get(closeDataListInDB, includeLastDate=False)
-                    result = round((closeDataListInDB[0] * (1-self.fee) - closeDataListInDB[self.stay]) / closeDataListInDB[self.stay], 4)
-                    codeDataList.append([growth, result, code])
+                    # if sr =='momentum':
+                    if closeDataListInDB[-1] <= 0:
+                        self.logger.warning('the close price is strange, date: %s, code: %s' %(date, code))
+                        self.stopCodeList.append(code)
+                    else:
+                        growth = self.momentum.get(closeDataListInDB, includeLastDate=self.includeLastDate)
+                        result = round((closeDataListInDB[0] * (1-self.fee) - closeDataListInDB[self.stay]) / closeDataListInDB[self.stay], 4)
+                        codeDataList.append([growth, result, code])
             self.codeListInDB = self.getCodeWithoutStopCode()
             if len(self.codeListInDB) < self.categoryNo * self.portfolio:
                 break
             else:
                 # https://haesoo9410.tistory.com/193
                 codeDataList.sort(key=lambda x:x[0])
-                self.buyAndSell(date, codeDataList)
-                time.sleep(5)
+                avgGrowthList, avgResultList = self.buyAndSell(codeDataList)
+                excelDataList = [date] + avgGrowthList + avgResultList
+                writeInExcel(excelDataList, dataType='data', sheetName=sheetName)
             self.stopCodeList = []
 
     def closeDataInDB(self, code, endDate=20211100):
@@ -66,16 +77,27 @@ class BackTesting(CustomModel):
                 codeListInDB.append(code)
         return codeListInDB
 
-    def buyAndSell(self, date, codeDataList):
+    def buyAndSell(self, codeDataList):
         lenCode = len(codeDataList)
+        avgGrowthList = []
+        avgResultList = []
         for i in range(self.categoryNo):
             first = round(i / self.categoryNo * lenCode)
             second = round( (i + 1) / self.categoryNo * lenCode)
+            growthList = []
             resultList = []
             for data in codeDataList[first: second]:
+                growthList.append(data[0])
                 resultList.append(data[1])
-            avgResultList = sum(resultList) / len(resultList)
-            print(date, i + 1, avgResultList)
+            avgGrowthList.append(round(sum(growthList) / len(growthList), 4))
+            avgResultList.append(round(sum(resultList) / len(resultList), 4))
+        return avgGrowthList, avgResultList
+
+    def category(self):
+        categoryList = []
+        for i in range(self.categoryNo):
+            categoryList.append(i+1)
+        return categoryList + categoryList
 
 
 

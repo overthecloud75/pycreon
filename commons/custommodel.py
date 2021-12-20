@@ -1,7 +1,7 @@
 from pymongo import MongoClient
 
 try:
-    from config.privateconfig import MONGOURL, DB_NAME
+    from config.privateconfig import MONGO_URL, DB_NAME
 except Exception:
     MONGOURL = 'mongodb://localhost:27017/'
     DB_NAME = 'Daeshin'
@@ -9,7 +9,7 @@ except Exception:
 class CustomModel:
 
     def __init__(self):
-        self.mongoClient = MongoClient(MONGOURL)
+        self.mongoClient = MongoClient(MONGO_URL)
         self.db = self.mongoClient[DB_NAME]
 
     def corpCodeInDB(self):

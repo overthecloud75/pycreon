@@ -4,19 +4,19 @@ import json
 import zipfile
 from xml.etree.ElementTree import parse
 
-from config.publicconfig import DARTURL, DARTSAVEPATH
-from config.privateconfig import DARTKEY
+from config.publicconfig import DART_URL, DART_SAVE_PATH
+from config.privateconfig import DART_KEY
 
 def requestData(apiPath, verb='GET', dataType='json', data=None, params=None):
     '''
         dataType = json -> data 반환
         dataType = xml -> binaryfile을 zip으로 변환 후 unzip 진행
     '''
-    urlPath = DARTURL + apiPath + '.' + dataType
+    urlPath = DART_URL + apiPath + '.' + dataType
     if params:
-        params['crtfc_key'] = DARTKEY
+        params['crtfc_key'] = DART_KEY
     else:
-        params = {'crtfc_key': DARTKEY}
+        params = {'crtfc_key': DART_KEY}
     try:
         r = requests.request(verb, urlPath, json=data, params=params, timeout=3.0)
     except Exception as e:
@@ -32,10 +32,10 @@ def requestData(apiPath, verb='GET', dataType='json', data=None, params=None):
                 else:
                     return responseJson
             else:
-                if os.path.exists(DARTSAVEPATH):
+                if os.path.exists(DART_SAVE_PATH):
                     pass
                 else:
-                    os.mkdir(DARTSAVEPATH)
+                    os.mkdir(DART_SAVE_PATH)
                 fileName = apiPath + '.zip'
                 binarySave(fileName, content=r.content)
                 unZip(fileName)
@@ -46,13 +46,13 @@ def requestData(apiPath, verb='GET', dataType='json', data=None, params=None):
             return None
 
 def binarySave(fileName, content=b''):
-    f = open(os.path.join(DARTSAVEPATH, fileName), 'wb')
+    f = open(os.path.join(DART_SAVE_PATH, fileName), 'wb')
     f.write(content)
     f.close()
 
 def unZip(fileName):
-    xlmZip = zipfile.ZipFile(os.path.join(DARTSAVEPATH, fileName))
-    xlmZip.extractall(DARTSAVEPATH)
+    xlmZip = zipfile.ZipFile(os.path.join(DART_SAVE_PATH, fileName))
+    xlmZip.extractall(DART_SAVE_PATH)
     xlmZip.close()
 
 def corpCodeToList():
@@ -66,7 +66,7 @@ def corpCodeToList():
             </list>
     '''
     # https://wikidocs.net/21140
-    tree = parse(os.path.join(DARTSAVEPATH, 'corpCode.xml'))
+    tree = parse(os.path.join(DART_SAVE_PATH, 'corpCode.xml'))
     root = tree.getroot()
 
     corpCodeList = root.findall('list')
