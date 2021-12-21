@@ -1,5 +1,4 @@
 import logging
-import time
 
 from commons.util import getDateList
 from commons.custommodel import CustomModel
@@ -7,23 +6,19 @@ from commons.excel import category, writeInExcel, summarize
 from backtesting.factors import Momentum
 
 class BackTesting(CustomModel):
-    def __init__(self, period=12, stay=1, categoryNo=20, portfolio=10, fee=0.0025, includeLastDate=False):
+    def __init__(self, portfolio=10, categoryNo=20, fee=0.0025, includeLastDate=False):
         super().__init__()
         self.logger = logging.getLogger(__name__)
         self.logger.info('%s start' % __name__)
-        self.codeListInDB = self.codeInDB()
+
         self.dateList = getDateList()
 
-        self.period = period
-        self.stay = stay
         self.categoryNo = categoryNo
         self.portfolio = portfolio
         self.fee = fee
         self.includeLastDate = includeLastDate
 
-        self.momentum = Momentum(period=self.period, stay= self.stay)
-
-    def strategy(self, sr='momentum'):
+    def strategy(self, sr='momentum', period=12, stay=1):
         '''
             1.  DB에서 stockCodeList를 확인
             2.  for dateList code
@@ -33,9 +28,9 @@ class BackTesting(CustomModel):
             6.  data를 excel 기록
             7.  기록된 data를 다식 summarize
         '''
-        self.stopCodeList = []
-        sheetName = sr[0:2] + '_pe' + str(self.period) + '_st' + str(self.stay) + '_la' + \
-                    str(self.includeLastDate)[0:2] + '_fee' + str(self.fee)
+
+        sheetName = self.initialize(sr=sr, period=period, stay=stay)
+
         categoryList = category(categoryNo=self.categoryNo, types=['growth', 'result'])
         writeInExcel(categoryList, dataType='title', sheetName=sheetName)
         for date in self.dateList:
@@ -64,7 +59,20 @@ class BackTesting(CustomModel):
                 writeInExcel(excelDataList, dataType='data', sheetName=sheetName)
             self.stopCodeList = []
 
-        summarize(categoryNo=self.categoryNo, sheetName=sheetName)
+        summarize(categoryNo=self.categoryNo, stay=self.stay, sheetName=sheetName)
+
+    def initialize(self, sr= 'momentum', period=12, stay=1):
+        self.period = period
+        self.stay = stay
+        self.momentum = Momentum(period=self.period, stay=self.stay)
+
+        sheetName = sr[0:2] + '_pe' + str(self.period) + '_st' + str(self.stay) + '_la' + \
+                         str(self.includeLastDate)[0:2] + '_fee' + str(self.fee)
+
+        self.codeListInDB = self.codeInDB()
+        self.stopCodeList = []
+
+        return sheetName
 
     def closeDataInDB(self, code, endDate=20211100):
         collection = self.db['chart']

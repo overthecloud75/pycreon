@@ -18,7 +18,7 @@ def requestData(apiPath, verb='GET', dataType='json', data=None, params=None):
     else:
         params = {'crtfc_key': DART_KEY}
     try:
-        r = requests.request(verb, urlPath, json=data, params=params, timeout=3.0)
+        r = requests.request(verb, urlPath, json=data, params=params, timeout=5.0)
     except Exception as e:
         print(e)
     else:

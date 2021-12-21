@@ -52,7 +52,7 @@ def writeInExcel(dataList, dataType='data', fileName='분석 결과', sheetName=
         ws.append(dataList)
     wb.save(filePath)
 
-def summarize(categoryNo=20, fileName='분석 결과', sheetName='결과'):
+def summarize(categoryNo=20, stay=1, fileName='분석 결과', sheetName='결과'):
     '''
         1. data 수집해 있는 sheet를 불러 들임
         2. 시간대 별로 data 확인
@@ -77,17 +77,39 @@ def summarize(categoryNo=20, fileName='분석 결과', sheetName='결과'):
 
     dateList.reverse()
     newDataDict = {}
+
+    '''
     lastDate = 0
     for i, date in enumerate(dateList):
         newDataDict[date] = []
+        stay = 1
         for j in range(categoryNo):
             if i == 0:
-                result = dataDict[date][j]
+                result = round(dataDict[date][j] / stay, 4)
+                # stay로 나눠주지 않으면 이익및 손해가 투자금 / stay에 비례하는 것이 아닌 투자금에 비례
                 newDataDict[date].append(result)
             else:
-                result = round((newDataDict[lastDate][j] + 1) * (dataDict[date][j] + 1) - 1, 4)
+                result = round((newDataDict[lastDate][j] + 1) * (dataDict[date][j] / stay + 1) - 1, 4)
                 newDataDict[date].append(result)
-        lastDate = date
+        lastDate = dat
+    '''
+    resultDict = {}
+    for i in range(stay):
+        resultDict[i] = []
+        for j in range(categoryNo):
+            resultDict[i].append(0)
+
+    for i, date in enumerate(dateList):
+        newDataDict[date] = []
+        for j in range(categoryNo):
+            result = round((resultDict[i % stay][j] + 1) * (dataDict[date][j] + 1) - 1, 4)
+            resultDict[i % stay][j] = result
+
+        for j in range(categoryNo):
+            sum = 0
+            for k in range(stay):
+                sum = round(sum + resultDict[k][j] / stay, 4)
+            newDataDict[date].append(sum)
 
     sheetName = 'sm_' + sheetName
     titleList = category(categoryNo=20, types=['newResult'])

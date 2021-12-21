@@ -6,7 +6,10 @@ def main():
     logger.info('main start')
 
     backtest = BackTesting()
-    backtest.strategy()
+    backtest.strategy(stay=1)
+    backtest.strategy(stay=2)
+    backtest.strategy(stay=3)
+    backtest.strategy(stay=6)
 
 if __name__ == '__main__':
     main()
