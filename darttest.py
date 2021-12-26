@@ -16,7 +16,7 @@ def main():
             - 3분기보고서 : 11014
             - 사업보고서 : 11011
     '''
-    dart = Dart(bsnsYearList=[2015], reprtCodeList=[11011])
+    dart = Dart(bsnsYearList=[2015], reprtCodeList=[11014])
     dart.corpCodeToDB()
     dart.insertNewFinanceData()
 
