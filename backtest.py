@@ -6,10 +6,9 @@ def main():
     logger.info('main start')
 
     backtest = BackTesting()
-    backtest.strategy(stay=1)
-    backtest.strategy(stay=2)
-    backtest.strategy(stay=3)
-    backtest.strategy(stay=6)
+    for period in [24]:
+        for stay in [1, 2, 3, 6]:
+            backtest.strategy(period=period, stay=stay, beforeStay=0)
 
 if __name__ == '__main__':
     main()

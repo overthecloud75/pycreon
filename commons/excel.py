@@ -7,13 +7,11 @@ def category(categoryNo=20, types=[]):
     categoryList = []
     for i in range(categoryNo):
         categoryList.append(i+1)
+    newCategoryList = []
     if len(types) == 0:
-        newCategoryList = []
-    elif len(types) == 1:
-        newCategoryList = categoryList
+        pass
     else:
-        newCategoryList = []
-        for i in range(len(types) - 1):
+        for i in range(len(types)):
             newCategoryList = newCategoryList + categoryList
     return newCategoryList
 
@@ -70,10 +68,10 @@ def summarize(categoryNo=20, stay=1, fileName='분석 결과', sheetName='결과
 
     for i in range(maxRow - 1):
         dateList.append(ws.cell(i + 2, 1).value)
-        dataDict[ws.cell(i+2, 1).value] = []
+        dataDict[ws.cell(i + 2, 1).value] = []
         for j in range(categoryNo):
             result = ws.cell(i + 2, categoryNo + 2 + j).value
-            dataDict[ws.cell(i+2, 1).value].append(result)
+            dataDict[ws.cell(i + 2, 1).value].append(result)
 
     dateList.reverse()
     newDataDict = {}
@@ -112,11 +110,12 @@ def summarize(categoryNo=20, stay=1, fileName='분석 결과', sheetName='결과
             newDataDict[date].append(sum)
 
     sheetName = 'sm_' + sheetName
-    titleList = category(categoryNo=20, types=['newResult'])
-    writeInExcel(titleList, dataType='title', sheetName=sheetName)
+    fileName = 'sm_' + fileName
+    titleList = category(categoryNo=categoryNo, types=['newResult'])
+    writeInExcel(titleList, dataType='title', fileName=fileName, sheetName=sheetName)
     for date in dateList:
         resultList = [date] + newDataDict[date]
-        writeInExcel(resultList, dataType='data', sheetName=sheetName)
+        writeInExcel(resultList, dataType='data', fileName=fileName, sheetName=sheetName)
 
 
 

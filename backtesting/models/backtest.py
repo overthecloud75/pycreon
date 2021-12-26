@@ -1,13 +1,11 @@
 import logging
 
 from commons.util import getDateList
-from commons.custommodel import CustomModel
 from commons.excel import category, writeInExcel, summarize
-from backtesting.factors import Momentum
+from backtesting.factors import Momentum, PBR
 
-class BackTesting(CustomModel):
-    def __init__(self, portfolio=10, categoryNo=20, fee=0.0025, includeLastDate=False):
-        super().__init__()
+class BackTesting():
+    def __init__(self, portfolio=10, categoryNo=20, fee=0.0025):
         self.logger = logging.getLogger(__name__)
         self.logger.info('%s start' % __name__)
 
@@ -16,71 +14,81 @@ class BackTesting(CustomModel):
         self.categoryNo = categoryNo
         self.portfolio = portfolio
         self.fee = fee
-        self.includeLastDate = includeLastDate
 
-    def strategy(self, sr='momentum', period=12, stay=1):
+    def strategy(self, sr='momentum', period=12, stay=1, beforeStay=1):
         '''
-            1.  DB에서 stockCodeList를 확인
+            1.  initialize
+                -> DB에서 stockCodeList를 확인
+                -> excel data title 작성
+                -> fileName 및 sheetName 반환
             2.  for dateList code
-            3.  period및 stay 기간만큼 closeDataList 정보 수집 (date에 대한 내림 차순)
-            4.  period및 stay 기간만큼 없는 경우 codeList에서 제외
+            3.  period + stay + 1 기간만큼 closeDataList 정보 수집 (date에 대한 내림 차순)
+            4.  period + stay + 1 기간만큼 없는 경우 codeList에서 제외
             5.  codeList의 갯수가 categoryNo * portfolio 보다 작으면 break
-            6.  data를 excel 기록
-            7.  기록된 data를 다식 summarize
+            6.  growth(과거 성장), result (결과) 기록 확인
+            7.  category별 averaging 진행
+            7.  data를 excel 기록
+            8.  기록된 data를 다시 summarize
         '''
 
-        sheetName = self.initialize(sr=sr, period=period, stay=stay)
+        fileName, sheetName = self.initialize(sr=sr, period=period, stay=stay, beforeStay=beforeStay)
 
-        categoryList = category(categoryNo=self.categoryNo, types=['growth', 'result'])
-        writeInExcel(categoryList, dataType='title', sheetName=sheetName)
         for date in self.dateList:
-            codeDataList = []
-            for code in self.codeListInDB:
-                closeDataListInDB = self.closeDataInDB(code, endDate=date)
-                if len(closeDataListInDB) != self.period + self.stay:
-                    self.stopCodeList.append(code)
-                else:
-                    # if sr =='momentum':
-                    if closeDataListInDB[-1] <= 0:
-                        self.logger.warning('the close price is strange, date: %s, code: %s' %(date, code))
-                        self.stopCodeList.append(code)
-                    else:
-                        growth = self.momentum.get(closeDataListInDB, includeLastDate=self.includeLastDate)
-                        result = round((closeDataListInDB[0] * (1-self.fee) - closeDataListInDB[self.stay]) / closeDataListInDB[self.stay], 4)
-                        codeDataList.append([growth, result, code])
+            growthResultList = self.getGrowthResult(date=date)
             self.codeListInDB = self.getCodeWithoutStopCode()
             if len(self.codeListInDB) < self.categoryNo * self.portfolio:
                 break
             else:
                 # https://haesoo9410.tistory.com/193
-                codeDataList.sort(key=lambda x:x[0])
-                avgGrowthList, avgResultList = self.buyAndSell(codeDataList)
+                growthResultList.sort(key=lambda x:x[0])
+                avgGrowthList, avgResultList = self.avgGrowthResult(growthResultList)
                 excelDataList = [date] + avgGrowthList + avgResultList
-                writeInExcel(excelDataList, dataType='data', sheetName=sheetName)
+                writeInExcel(excelDataList, dataType='data', fileName=fileName, sheetName=sheetName)
             self.stopCodeList = []
 
-        summarize(categoryNo=self.categoryNo, stay=self.stay, sheetName=sheetName)
+        summarize(categoryNo=self.categoryNo, stay=self.stay, fileName=fileName, sheetName=sheetName)
 
-    def initialize(self, sr= 'momentum', period=12, stay=1):
+    def initialize(self, sr= 'momentum', period=12, stay=1, beforeStay=1):
         self.period = period
         self.stay = stay
-        self.momentum = Momentum(period=self.period, stay=self.stay)
+        self.limit = period + stay + 1
+        self.beforeStay = beforeStay
+        # period + stay + 1 만큼 data를 취하기 위함
+        if sr == 'momentum':
+            self.factor = Momentum(period=self.period, stay=self.stay, fee=self.fee, beforeStay=self.beforeStay)
+        elif sr == 'PBR':
+            equityTermsListInDB = self.equityTerms()
+            self.factor = PBR(equityTermsList=equityTermsListInDB, period=self.period, stay=self.stay, fee=self.fee, beforeStay=self.beforeStay)
+        else:
+            self.factor = Momentum(period=self.period, stay=self.stay, fee=self.fee, beforeStay=self.beforeStay)
 
-        sheetName = sr[0:2] + '_pe' + str(self.period) + '_st' + str(self.stay) + '_la' + \
-                         str(self.includeLastDate)[0:2] + '_fee' + str(self.fee)
+        fileName = sr[0:2] + '_pe' + str(self.period) + '_bs' + str(self.beforeStay)
+        sheetName = sr[0:2] + '_pe' + str(self.period) + '_st' + str(self.stay) + '_bs' + \
+                         str(self.beforeStay) + '_fee' + str(self.fee)
 
-        self.codeListInDB = self.codeInDB()
+        self.codeListInDB = self.factor.codeInDB()
         self.stopCodeList = []
 
-        return sheetName
+        categoryList = category(categoryNo=self.categoryNo, types=['growth', 'result'])
+        writeInExcel(categoryList, dataType='title', fileName=fileName, sheetName=sheetName)
 
-    def closeDataInDB(self, code, endDate=20211100):
-        collection = self.db['chart']
-        closeDataListInDB = []
-        dataListInDB = collection.find({'code': code, 'type': 'M', 'date': {'$lte': endDate}},  sort=[('date', -1)]).limit(self.period + self.stay)
-        for data in dataListInDB:
-            closeDataListInDB.append(data['data'][4])
-        return closeDataListInDB
+        return fileName, sheetName
+
+    def getGrowthResult(self, date=None):
+        growthResultList = []
+        for code in self.codeListInDB:
+            closeDataListInDB = self.factor.closeDataInDB(code, endDate=date)
+            if len(closeDataListInDB) != self.limit:
+                self.stopCodeList.append(code)
+            else:
+                # if sr =='momentum':
+                if closeDataListInDB[-1] <= 0:
+                    self.logger.warning('the close price is strange, date: %s, code: %s' % (date, code))
+                    self.stopCodeList.append(code)
+                else:
+                    growth, result = self.factor.get(closeDataListInDB)
+                    growthResultList.append([growth, result, code])
+        return growthResultList
 
     def getCodeWithoutStopCode(self):
         codeListInDB = []
@@ -89,7 +97,7 @@ class BackTesting(CustomModel):
                 codeListInDB.append(code)
         return codeListInDB
 
-    def buyAndSell(self, codeDataList):
+    def avgGrowthResult(self, codeDataList):
         lenCode = len(codeDataList)
         avgGrowthList = []
         avgResultList = []
@@ -104,6 +112,13 @@ class BackTesting(CustomModel):
             avgGrowthList.append(round(sum(growthList) / len(growthList), 4))
             avgResultList.append(round(sum(resultList) / len(resultList), 4))
         return avgGrowthList, avgResultList
+
+    def equityTerms(self):
+        collection = self.db['terms']
+        equity = collection.find_one({'accountId': 'ifrs-full_Equity'})
+        equityTermsListInDB = equity['accountName']
+        return equityTermsListInDB
+
 
 
 
