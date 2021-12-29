@@ -59,7 +59,10 @@ class PBR(CustomModel):
     def closeDataInDB(self, code, endDate=20211100):
         collection = self.db['chart']
         closeDataListInDB = []
-        dataListInDB = collection.find({'code': code, 'type': 'M', 'date': {'$lte': endDate}},  sort=[('date', -1)]).limit(self.limit)
+        if str(endDate)[-2] != '00':
+            dataListInDB = collection.find({'code': code, 'type': 'D', 'date': {'$lte': endDate}}, sort=[('date', -1)]).limit(self.limit)
+        else:
+            dataListInDB = collection.find({'code': code, 'type': 'M', 'date': {'$lte': endDate}},  sort=[('date', -1)]).limit(self.limit)
         for data in dataListInDB:
             closeDataListInDB.append(data['data'][4])
         return closeDataListInDB

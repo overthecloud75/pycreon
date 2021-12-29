@@ -56,4 +56,3 @@ class Momentum(CustomModel):
                 codeListInDB.append(code)
         return codeListInDB
 
-

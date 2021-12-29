@@ -33,6 +33,9 @@ class BackTesting():
 
         fileName, sheetName = self.initialize(sr=sr, period=period, stay=stay, beforeStay=beforeStay)
 
+        categoryList = category(categoryNo=self.categoryNo, types=['growth', 'result'])
+        writeInExcel(categoryList, dataType='title', fileName=fileName, sheetName=sheetName)
+
         for date in self.dateList:
             growthResultList, lenCodeListInDB = self.factor.getGrowthResult(date=date)
             if lenCodeListInDB < self.categoryNo * self.portfolio:
@@ -63,9 +66,6 @@ class BackTesting():
         sheetName = sr[0:2] + '_pe' + str(self.period) + '_st' + str(self.stay) + '_bs' + \
                          str(self.beforeStay) + '_fee' + str(self.fee)
 
-        categoryList = category(categoryNo=self.categoryNo, types=['growth', 'result'])
-        writeInExcel(categoryList, dataType='title', fileName=fileName, sheetName=sheetName)
-
         return fileName, sheetName
 
     def avgGrowthResult(self, codeDataList):
@@ -83,6 +83,34 @@ class BackTesting():
             avgGrowthList.append(round(sum(growthList) / len(growthList), 4))
             avgResultList.append(round(sum(resultList) / len(resultList), 4))
         return avgGrowthList, avgResultList
+
+    def getCompanyCode(self, sr='momentum', period=12, beforeStay=1, date=None, level=1):
+        '''
+            1.  initialize
+            2.  beforestay = beforestay - 1, stay = 0, period = period - 1
+            3.  분위에 맞는 code 확인
+        '''
+        beforeStay = beforeStay - 1
+        period = period - 1
+        stay = 0
+        _, _ = self.initialize(sr=sr, period=period, stay=stay, beforeStay=beforeStay)
+        if date is None:
+            date = self.dateList[0 + beforeStay]
+        growthResultList, lenCodeListInDB = self.factor.getGrowthResult(date=date)
+        growthResultList.sort(key=lambda x: x[0])
+        first = round((level - 1) / self.categoryNo * lenCodeListInDB)
+        second = round(level / self.categoryNo * lenCodeListInDB)
+        growthResultList = growthResultList[first: second]
+
+        growthList = []
+        codeList = []
+        for data in growthResultList:
+            growthList.append(data[0])
+            codeList.append(data[2])
+        return growthList, codeList
+
+
+
 
 
 

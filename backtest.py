@@ -12,8 +12,13 @@ def main():
     #        backtest.strategy(period=period, stay=stay, beforeStay=0)
 
     # pbr
-    for stay in [1, 2, 3, 6]:
-        backtest.strategy(sr='pbr', period=0, stay=stay, beforeStay=0)
+    # for stay in [1, 2, 3, 6]:
+    #    backtest.strategy(sr='pbr', period=0, stay=stay, beforeStay=0)
+
+    # getCompanyCode
+    growthList, codeList = backtest.getCompanyCode(sr='pbr', level=20, date=20211229)
+    print(growthList)
+    print(codeList)
 
 if __name__ == '__main__':
     main()
