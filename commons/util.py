@@ -3,6 +3,7 @@ import datetime
 from config.publicconfig import NUMDATA_DAY, NUMDATA_MONTH, TRADING_END_TIME
 
 def getDiffDate(lastDate=None, tick='D'):
+    print(lastDate)
     now = datetime.datetime.now()
     if tick=='D':
         today = datetime.date.today()
@@ -34,6 +35,8 @@ def getDiffDate(lastDate=None, tick='D'):
             lastDate = str(lastDate)
             lastDateToDatetime = datetime.date(int(lastDate[0:4]), int(lastDate[4:6]), 1)
             numData = diffMonth(today, lastDateToDatetime)
+            if numData != 0:
+                numData = numData + 1
         else:
             numData = NUMDATA_MONTH
         today = int(today.strftime('%Y%m%d')) - 1

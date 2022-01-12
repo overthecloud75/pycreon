@@ -16,7 +16,7 @@ def main():
     #    backtest.strategy(sr='pbr', period=0, stay=stay, beforeStay=0)
 
     # getCompanyCode
-    growthList, codeList = backtest.getCompanyCode(sr='pbr', level=20, date=20211229)
+    growthList, codeList = backtest.getCompanyCode(sr='momentum', level=14)
     print(growthList)
     print(codeList)
 
